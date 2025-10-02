@@ -1,4 +1,3 @@
-
 # DGA Lab — Microservices for Botnet DGA Detection Evasion
 
 Hands‑on microservice lab to **evaluate and harden ML‑based DGA (Domain Generation Algorithm) detectors** with simple, reproducible adversarial mutations. Built with **Python/FastAPI** and packaged for **Docker Compose** (Helm chart optional).  
@@ -53,7 +52,7 @@ flowchart LR
 ```powershell
 # from the repo root
 docker compose up -d --build
-docker ps --format "table {{.Names}}\t{{.Ports}}"
+docker ps --format "table {.Names}\t{.Ports}"
 ```
 
 **One‑shot tests (PowerShell):**
@@ -132,18 +131,6 @@ uvicorn telemetry.app:app --port 8085
 
 ---
 
-## 🛡️ License & use
-Recommended: **Apache-2.0** (permissive + patent grant).  
-Add `SPDX-License-Identifier: Apache-2.0` to new source files.  
-This is for **defensive security evaluation** and education only.
-
----
-
-## 🙌 Credits
-Inspired by research on DGA detection/evasion. This lab provides a practical, swappable microservice scaffold to test detector robustness.
-
----
-
 ## 📚 References (APA style)
 
 Le, H., Pham, Q., Sahoo, D., & Hoi, S. C. H. (2018). *URLNet: Learning a URL representation with deep learning for malicious URL detection*. **arXiv**. https://arxiv.org/abs/1802.03162
@@ -158,45 +145,30 @@ If you use this project in your work, please cite it.
 
 ### BibTeX
 ```bibtex
-@software{4th_dga-lab_2025,
-  author       = {4th},
+@software{jackson_dga-lab_2025,
+  author       = {Freeman Jackson},
   title        = {DGA Lab: Microservices for Botnet DGA Detection Evasion},
   year         = {2025},
   version      = {v0.1.0},
   publisher    = {GitHub},
   url          = {https://github.com/4th/dga-lab},
-  note         = {Computer software} 
+  note         = {Computer software}
 }
 ```
 
 ### APA
-4th. (2025). *DGA Lab: Microservices for Botnet DGA Detection Evasion* (Version v0.1.0) [Computer software]. https://github.com/4th/dga-lab
+Jackson, F. (2025). *DGA Lab: Microservices for Botnet DGA Detection Evasion* (Version v0.1.0) [Computer software]. https://github.com/4th/dga-lab
 
 > 💡 If you create a tagged release (e.g., `v0.1.0`) or archive via Zenodo to obtain a DOI, update the version and add the DOI to your citation.
 
-### CITATION.cff
-Place this **CITATION.cff** file at the repository root to enable GitHub’s “Cite this repository” button.
+---
 
-```yaml
-cff-version: 1.2.0
-message: "If you use this software, please cite it as below."
-title: "DGA Lab: Microservices for Botnet DGA Detection Evasion"
-type: software
-authors:
-  - name: "4th"
-abstract: "Hands-on microservice lab to evaluate and harden ML-based DGA detectors using adversarial domain mutations. Docker/Helm, FastAPI, metrics/tracing."
-repository-code: "https://github.com/4th/dga-lab"
-url: "https://github.com/4th/dga-lab"
-license: Apache-2.0
-version: "v0.1.0"
-date-released: 2025-10-02
-preferred-citation:
-  type: software
-  authors:
-    - name: "4th"
-  title: "DGA Lab: Microservices for Botnet DGA Detection Evasion"
-  version: "v0.1.0"
-  year: 2025
-  url: "https://github.com/4th/dga-lab"
-```
+## 🛡️ License & use
+Recommended: **Apache-2.0** (permissive + patent grant).  
+Add `SPDX-License-Identifier: Apache-2.0` to new source files.  
+This is for **defensive security evaluation** and education only.
 
+---
+
+## 🙌 Credits
+Built and maintained by **Freeman Jackson**.

@@ -3,7 +3,7 @@ message: "If you use this software, please cite it as below."
 title: "DGA Lab: Microservices for Botnet DGA Detection Evasion"
 type: software
 authors:
-  - name: "4th"
+  - name: "Freeman Jackson"
 abstract: "Hands-on microservice lab to evaluate and harden ML-based DGA detectors using adversarial domain mutations. Docker/Helm, FastAPI, metrics/tracing."
 repository-code: "https://github.com/4th/dga-lab"
 url: "https://github.com/4th/dga-lab"
@@ -13,7 +13,7 @@ date-released: 2025-10-02
 preferred-citation:
   type: software
   authors:
-    - name: "4th"
+    - name: "Freeman Jackson"
   title: "DGA Lab: Microservices for Botnet DGA Detection Evasion"
   version: "v0.1.0"
   year: 2025
