@@ -1,62 +1,202 @@
 
-# DGA Detection Evasion — Kubernetes Microservices Skeleton
+# DGA Lab — Microservices for Botnet DGA Detection Evasion
 
-This repository provides a minimal end-to-end **Botnet DGA Detection Evasion** lab with pluggable microservices.
-Each service is a FastAPI app with a tiny stub implementation so you can run locally (Docker Compose) or deploy to Kubernetes.
+Hands‑on microservice lab to **evaluate and harden ML‑based DGA (Domain Generation Algorithm) detectors** with simple, reproducible adversarial mutations. Built with **Python/FastAPI** and packaged for **Docker Compose** (Helm chart optional).  
+> **Defensive research only.** Use on systems you own/administer.
 
-## Services
-- `ingest-api`: Accepts domain batches.
-- `feature-extractor`: Computes simple features from domains.
-- `dga-detector`: Dummy CNN-like classifier (heuristic) — replace with your model server.
-- `mutator`: Generates adversarial domain mutations.
-- `evasion-orchestrator`: Iteratively queries detector with mutations until evasion succeeds.
-- `gateway`: Facade to call other services.
-- `telemetry`: Stub endpoint to receive logs/metrics.
+---
 
-## Quick start (local)
-```bash
-# 1) Create virtualenv
-python -m venv .venv && source .venv/bin/activate
+## 🧭 Overview
+- **Gateway (8080)**: single entrypoint (`/ingest`, `/score`, `/mutate`, `/eval`)
+- **Ingest API (8081)**: load test domains
+- **Feature Extractor (8082)**: simple lexical/entropy features (extensible)
+- **Mutator (8083)**: generate adversarial domain variants
+- **Evasion Orchestrator (8084)**: iterate mutate→score until evasion
+- **DGA Detector (8501)**: scoring API (swap in your model server later)
+- **Telemetry (8085)**: stub for metrics/logs
+
+---
+
+## 🗺️ Architecture (Mermaid)
+> Rendered automatically on GitHub.
+
+```mermaid
+flowchart LR
+  user((Client)):::client --> gateway
+
+  subgraph "DGA Lab (Docker Compose Network)"
+    gateway[Gateway\n:8080]:::svc
+    ingest[Ingest API\n:8081]:::svc
+    feature[Feature Extractor\n:8082]:::svc
+    mutator[Mutator\n:8083]:::svc
+    orchestrator[Evasion Orchestrator\n:8084]:::svc
+    detector[DGA Detector\n:8501]:::svc
+    telemetry[Telemetry\n:8085]:::svc
+
+    gateway -- "/ingest" --> ingest
+    gateway -- "/score" --> detector
+    gateway -- "/mutate" --> mutator
+    gateway -- "/eval" --> orchestrator
+
+    orchestrator -- "mutate" --> mutator
+    orchestrator -- "score" --> detector
+  end
+
+  classDef svc fill:#F3F7FF,stroke:#5B8DEF,stroke-width:1px,color:#0B1F44;
+  classDef client fill:#E9FBF0,stroke:#1E7F3E,stroke-width:1px,color:#0B1F44;
+```
+
+---
+
+## 🚀 Quick start (Docker Compose)
+
+```powershell
+# from the repo root
+docker compose up -d --build
+docker ps --format "table {{.Names}}\t{{.Ports}}"
+```
+
+**One‑shot tests (PowerShell):**
+```powershell
+# Direct (bypasses gateway) — recommended for first run
+Unblock-File .\run-dga-direct.ps1
+.\run-dga-direct.ps1
+
+# Via gateway (after internal URLs are set to service names)
+Unblock-File .\run-dga-end2end.ps1
+.\run-dga-end2end.ps1
+```
+
+**Manual curls (via gateway):**
+```powershell
+# Ingest
+Invoke-RestMethod http://localhost:8080/ingest -Method POST -ContentType 'application/json' `
+  -Body (@{ batch_id="demo"; domains=@("secure-bank.co","paypa1-login.net","xkcd.com") } | ConvertTo-Json -Compress)
+
+# Score
+Invoke-RestMethod http://localhost:8080/score -Method POST -ContentType 'application/json' `
+  -Body (@{ domain="paypa1-login.net" } | ConvertTo-Json -Compress)
+
+# Mutate
+Invoke-RestMethod http://localhost:8080/mutate -Method POST -ContentType 'application/json' `
+  -Body (@{ domain="paypa1-login.net"; ops=@("insert:pos=3:ch=x") } | ConvertTo-Json -Compress)
+
+# Evasion
+Invoke-RestMethod http://localhost:8080/eval -Method POST -ContentType 'application/json' `
+  -Body (@{ domain="paypa1-login.net"; max_iters=5; target_conf=0.25 } | ConvertTo-Json -Compress)
+```
+
+---
+
+## ⚙️ Configuration (Docker)
+
+Inside Docker, **use service names**, not `localhost`:
+
+```yaml
+# docker-compose.yml (excerpt)
+services:
+  gateway:
+    environment:
+      INGEST_URL: http://ingest:8081/ingest/domains
+      SCORE_URL:  http://detector:8501/score
+      MUTATE_URL: http://mutator:8083/mutate
+      EVAL_URL:   http://orchestrator:8084/eval
+
+  orchestrator:
+    environment:
+      MUTATE_URL: http://mutator:8083/mutate
+      SCORE_URL:  http://detector:8501/score
+```
+
+Observability:
+- **/metrics** on each service (if enabled)
+- Optional **OpenTelemetry** via `OTEL_*` envs (`OTLP` exporter supported)
+
+---
+
+## 🧪 Local dev without Docker
+```powershell
+py -3 -m venv .venv
+.\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 
-# 2) Run a service (example: detector)
-uvicorn dga-detector.app:app --reload --port 8501
-# In other terminals, start the rest:
-uvicorn ingest-api.app:app --reload --port 8081
-uvicorn feature-extractor.app:app --reload --port 8082
-uvicorn mutator.app:app --reload --port 8083
-uvicorn evasion-orchestrator.app:app --reload --port 8084
-uvicorn gateway.app:app --reload --port 8080
-uvicorn telemetry.app:app --reload --port 8085
+# in separate terminals
+uvicorn dga-detector.app:app --port 8501
+uvicorn ingest-api.app:app --port 8081
+uvicorn feature-extractor.app:app --port 8082
+uvicorn mutator.app:app --port 8083
+uvicorn evasion-orchestrator.app:app --port 8084
+uvicorn gateway.app:app --port 8080
+uvicorn telemetry.app:app --port 8085
 ```
 
-### Example flow
-```bash
-# Ingest some domains
-curl -X POST http://localhost:8081/ingest/domains -H "content-type: application/json" -d '{
-  "batch_id":"demo","domains":["secure-bank.co","paypa1-login.net","xkcd.com"]
-}'
+---
 
-# Score a domain
-curl -X POST http://localhost:8501/score -H "content-type: application/json" -d '{
-  "domain":"paypa1-login.net"
-}'
+## 🛡️ License & use
+Recommended: **Apache-2.0** (permissive + patent grant).  
+Add `SPDX-License-Identifier: Apache-2.0` to new source files.  
+This is for **defensive security evaluation** and education only.
 
-# Mutate a domain
-curl -X POST http://localhost:8083/mutate -H "content-type: application/json" -d '{
-  "domain":"paypa1-login.net","ops":["insert:pos=3:ch=x"]
-}'
+---
 
-# Evasion test (orchestrator calls mutator+detector)
-curl -X POST http://localhost:8084/eval -H "content-type: application/json" -d '{
-  "domain":"paypa1-login.net","max_iters":5,"target_conf":0.25
-}'
+## 🙌 Credits
+Inspired by research on DGA detection/evasion. This lab provides a practical, swappable microservice scaffold to test detector robustness.
+
+---
+
+## 📚 References (APA style)
+
+Le, H., Pham, Q., Sahoo, D., & Hoi, S. C. H. (2018). *URLNet: Learning a URL representation with deep learning for malicious URL detection*. **arXiv**. https://arxiv.org/abs/1802.03162
+
+Yu, B., Pan, J., Hu, J., Nascimento, A. C., & De Cock, M. (2018). *Character level based detection of DGA domain names*. In **2018 International Joint Conference on Neural Networks (IJCNN)** (pp. 1–8). IEEE. http://faculty.washington.edu/mdecock/papers/byu2018a.pdf
+
+---
+
+## 📝 How to cite this repository
+
+If you use this project in your work, please cite it.
+
+### BibTeX
+```bibtex
+@software{4th_dga-lab_2025,
+  author       = {4th},
+  title        = {DGA Lab: Microservices for Botnet DGA Detection Evasion},
+  year         = {2025},
+  version      = {v0.1.0},
+  publisher    = {GitHub},
+  url          = {https://github.com/4th/dga-lab},
+  note         = {Computer software} 
+}
 ```
 
-## Kubernetes
-See `k8s/manifests.yaml` for a basic namespace, Deployments, Services, Ingress, HPA and NetworkPolicy examples.
-Replace container images with your registry paths.
+### APA
+4th. (2025). *DGA Lab: Microservices for Botnet DGA Detection Evasion* (Version v0.1.0) [Computer software]. https://github.com/4th/dga-lab
 
-## Replace the dummy model
-Swap out `dga-detector/app.py` with TensorFlow Serving, TorchServe, or your own model container.
-Ensure it implements the `/score` contract defined in `common/schemas.py`.
+> 💡 If you create a tagged release (e.g., `v0.1.0`) or archive via Zenodo to obtain a DOI, update the version and add the DOI to your citation.
+
+### CITATION.cff
+Place this **CITATION.cff** file at the repository root to enable GitHub’s “Cite this repository” button.
+
+```yaml
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "DGA Lab: Microservices for Botnet DGA Detection Evasion"
+type: software
+authors:
+  - name: "4th"
+abstract: "Hands-on microservice lab to evaluate and harden ML-based DGA detectors using adversarial domain mutations. Docker/Helm, FastAPI, metrics/tracing."
+repository-code: "https://github.com/4th/dga-lab"
+url: "https://github.com/4th/dga-lab"
+license: Apache-2.0
+version: "v0.1.0"
+date-released: 2025-10-02
+preferred-citation:
+  type: software
+  authors:
+    - name: "4th"
+  title: "DGA Lab: Microservices for Botnet DGA Detection Evasion"
+  version: "v0.1.0"
+  year: 2025
+  url: "https://github.com/4th/dga-lab"
+```
+
