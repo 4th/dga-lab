@@ -1,0 +1,65 @@
+services:
+  gateway:
+    build:
+      context: .
+      dockerfile: ./gateway/Dockerfile
+    ports: ["8080:8080"]
+    environment:
+      INGEST_URL: http://ingest:8081/ingest/domains
+      SCORE_URL:  http://detector:8501/score
+      MUTATE_URL: http://mutator:8083/mutate
+      EVAL_URL:   http://orchestrator:8084/eval
+    depends_on:
+      - ingest
+      - detector
+      - mutator
+      - orchestrator
+    restart: unless-stopped
+
+  ingest:
+    build:
+      context: .
+      dockerfile: ./ingest-api/Dockerfile
+    ports: ["8081:8081"]
+    restart: unless-stopped
+
+  feature:
+    build:
+      context: .
+      dockerfile: ./feature-extractor/Dockerfile
+    ports: ["8082:8082"]
+    restart: unless-stopped
+
+  mutator:
+    build:
+      context: .
+      dockerfile: ./mutator/Dockerfile
+    ports: ["8083:8083"]
+    restart: unless-stopped
+
+  orchestrator:
+    build:
+      context: .
+      dockerfile: ./evasion-orchestrator/Dockerfile
+    ports: ["8084:8084"]
+    environment:
+      MUTATE_URL: http://mutator:8083/mutate
+      SCORE_URL:  http://detector:8501/score
+    depends_on:
+      - mutator
+      - detector
+    restart: unless-stopped
+
+  detector:
+    build:
+      context: .
+      dockerfile: ./dga-detector/Dockerfile
+    ports: ["8501:8501"]
+    restart: unless-stopped
+
+  telemetry:
+    build:
+      context: .
+      dockerfile: ./telemetry/Dockerfile
+    ports: ["8085:8085"]
+    restart: unless-stopped

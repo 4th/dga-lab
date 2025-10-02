@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+env/
+venv/
+
+# FastAPI / Uvicorn
+*.log
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Docker
+**/.dockerignore
+**/Dockerfile.*~
+docker-compose.override.yml
+**/.env
+
+# Node / frontend (if any)
+node_modules/
+
+# Build cache
+dist/
+build/
+
+# Supabase (if present)
+supabase/.temp/
+supabase/.branches/
